@@ -57,6 +57,8 @@
     .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}
     .field{display:flex;flex-direction:column;gap:6px}
     .field label{font-size:13px;font-weight:700}
+    .unit-input{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:8px}
+    .unit-input input,.unit-input select{min-width:0;width:100%}
     input,select,textarea{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;color:var(--text)}
     input:focus,select:focus,textarea:focus{outline:2px solid #c7d7cc;border-color:var(--brand)}
     .search{min-width:260px;flex:1}
@@ -209,8 +211,7 @@ function ingredientForm(){
  +`<div class="panel" style="max-width:800px"><form id="ingredientForm"><div class="form-grid">
   <div class="field"><label>원재료명 *</label><input id="iName" value="${i.name}" required placeholder="예: 원두"></div>
   <div class="field"><label>구분 *</label><select id="iType"><option ${i.type==='원재료'?'selected':''}>원재료</option><option ${i.type==='일회용품'?'selected':''}>일회용품</option></select></div>
-  <div class="field"><label>매입 수량 *</label><input id="iQuantity" type="number" min=".001" step=".001" value="${purchaseQuantity(i)}" required placeholder="예: 2"></div>
-  <div class="field"><label>매입 단위 *</label><select id="iUnit"><option ${i.purchaseUnit==='kg'?'selected':''}>kg</option><option ${i.purchaseUnit==='g'?'selected':''}>g</option><option ${i.purchaseUnit==='L'?'selected':''}>L</option><option ${i.purchaseUnit==='ml'?'selected':''}>ml</option><option ${i.purchaseUnit==='개'?'selected':''}>개</option></select></div>
+  <div class="field"><label>매입 단위 *</label><div class="unit-input"><input id="iQuantity" type="number" min=".001" step=".001" value="${purchaseQuantity(i)}" required placeholder="수량 (예: 2)"><select id="iUnit" aria-label="매입 단위"><option ${i.purchaseUnit==='kg'?'selected':''}>kg</option><option ${i.purchaseUnit==='g'?'selected':''}>g</option><option ${i.purchaseUnit==='L'?'selected':''}>L</option><option ${i.purchaseUnit==='ml'?'selected':''}>ml</option><option ${i.purchaseUnit==='개'?'selected':''}>개</option></select></div></div>
   <div class="field"><label>매입 가격(원) *</label><input id="iPrice" type="number" min="0" value="${i.purchasePrice}" required></div>
   <div class="field full"><label>메모</label><textarea id="iMemo" rows="3">${i.memo||''}</textarea></div>
   <div class="full callout" id="unitPreview">가격을 입력하면 사용 단가가 표시됩니다.</div>
