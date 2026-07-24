@@ -209,14 +209,15 @@ function ingredientList(){
 function renderIngredientTable(){
  const q=($('#ingSearch')?.value||'').toLowerCase(),type=$('#ingType')?.value||'';
  const list=state.ingredients.filter(i=>i.name.toLowerCase().includes(q)&&(!type||i.type===type));
- $('#ingTable').innerHTML=`<div class="table-wrap"><table><thead><tr><th>원재료명</th><th>구분</th><th>매입 단위</th><th>매입 가격</th><th>사용 단가</th><th>최근 수정일</th><th>관리</th></tr></thead><tbody>${list.map(i=>`<tr><td><b>${i.name}</b><div class="muted">${i.memo||''}</div></td><td><span class="badge neutral">${i.type}</span></td><td>${purchaseQuantity(i)} ${i.purchaseUnit}</td><td>${money(i.purchasePrice)}</td><td>${unitPrice(i).toFixed(2)}엔/${unitUse(i.purchaseUnit)}</td><td>${i.updatedAt}</td><td><button class="btn small" onclick="editIngredient(${i.id})">편집</button> <button class="btn small danger" onclick="removeIngredient(${i.id})">삭제</button></td></tr>`).join('')||`<tr><td colspan="7" class="empty">검색 결과가 없습니다.</td></tr>`}</tbody></table></div>`;
+ $('#ingTable').innerHTML=`<div class="table-wrap"><table><thead><tr><th>원재료명</th><th>구분</th><th>매입처</th><th>매입 단위</th><th>매입 가격</th><th>사용 단가</th><th>최근 수정일</th><th>관리</th></tr></thead><tbody>${list.map(i=>`<tr><td><b>${i.name}</b><div class="muted">${i.memo||''}</div></td><td><span class="badge neutral">${i.type}</span></td><td>${state.suppliers.find(s=>s.id===Number(i.supplierId))?.name||'<span class="muted">미지정</span>'}</td><td>${purchaseQuantity(i)} ${i.purchaseUnit}</td><td>${money(i.purchasePrice)}</td><td>${unitPrice(i).toFixed(2)}엔/${unitUse(i.purchaseUnit)}</td><td>${i.updatedAt}</td><td><button class="btn small" onclick="editIngredient(${i.id})">편집</button> <button class="btn small danger" onclick="removeIngredient(${i.id})">삭제</button></td></tr>`).join('')||`<tr><td colspan="8" class="empty">검색 결과가 없습니다.</td></tr>`}</tbody></table></div>`;
 }
 function ingredientForm(){
- const i=editingIngredient||{name:'',type:'원재료',purchaseQuantity:1,purchaseUnit:'kg',purchasePrice:'',memo:''};
+ const i=editingIngredient||{name:'',type:'원재료',supplierId:'',purchaseQuantity:1,purchaseUnit:'kg',purchasePrice:'',memo:''};
  return header(editingIngredient?'원재료 편집':'원재료 등록','원재료의 매입 정보와 사용 단가를 관리합니다.')
  +`<div class="panel" style="max-width:800px"><form id="ingredientForm"><div class="form-grid">
   <div class="field"><label>원재료명 *</label><input id="iName" value="${i.name}" required placeholder="예: 원두"></div>
   <div class="field"><label>구분 *</label><select id="iType"><option ${i.type==='원재료'?'selected':''}>원재료</option><option ${i.type==='일회용품'?'selected':''}>일회용품</option></select></div>
+  <div class="field full"><label>매입처</label><select id="iSupplier"><option value="">미지정</option>${state.suppliers.map(s=>`<option value="${s.id}" ${Number(i.supplierId)===s.id?'selected':''}>${s.name} (${s.country})</option>`).join('')}</select><div class="muted">매입처 관리에 등록된 업체 중에서 선택할 수 있습니다.</div></div>
   <div class="field"><label>매입 단위 *</label><div class="unit-input"><input id="iQuantity" type="number" min=".001" step=".001" value="${purchaseQuantity(i)}" required placeholder="수량 (예: 2)"><select id="iUnit" aria-label="매입 단위"><option ${i.purchaseUnit==='kg'?'selected':''}>kg</option><option ${i.purchaseUnit==='g'?'selected':''}>g</option><option ${i.purchaseUnit==='L'?'selected':''}>L</option><option ${i.purchaseUnit==='ml'?'selected':''}>ml</option><option ${i.purchaseUnit==='개'?'selected':''}>개</option></select></div></div>
   <div class="field"><label>매입 가격(엔) *</label><input id="iPrice" type="number" min="0" value="${i.purchasePrice}" required></div>
   <div class="field full"><label>메모</label><textarea id="iMemo" rows="3">${i.memo||''}</textarea></div>
@@ -316,7 +317,7 @@ function render(){
 function bindIngredientForm(){
  const preview=()=>{const p=Number($('#iPrice').value)||0,q=Number($('#iQuantity').value)||0,u=$('#iUnit').value;$('#unitPreview').innerHTML=p&&q?`${q} ${u}에 <b>${money(p)}</b> → ${unitUse(u)}당 <b>${(p/(q*divisor(u))).toFixed(2)}엔</b>`:'매입 수량과 가격을 입력하면 사용 단가가 표시됩니다.'};
  $('#iPrice').oninput=preview;$('#iQuantity').oninput=preview;$('#iUnit').onchange=preview;preview();
- $('#ingredientForm').onsubmit=e=>{e.preventDefault();const obj={id:editingIngredient?.id||Date.now(),name:$('#iName').value.trim(),type:$('#iType').value,purchaseQuantity:Number($('#iQuantity').value),purchaseUnit:$('#iUnit').value,purchasePrice:Number($('#iPrice').value),memo:$('#iMemo').value.trim(),updatedAt:dateNow()};if(editingIngredient)state.ingredients=state.ingredients.map(x=>x.id===obj.id?obj:x);else state.ingredients.push(obj);save();editingIngredient=null;toast('원재료를 저장했습니다.');go('ingredients')};
+ $('#ingredientForm').onsubmit=e=>{e.preventDefault();const obj={id:editingIngredient?.id||Date.now(),name:$('#iName').value.trim(),type:$('#iType').value,supplierId:$('#iSupplier').value?Number($('#iSupplier').value):null,purchaseQuantity:Number($('#iQuantity').value),purchaseUnit:$('#iUnit').value,purchasePrice:Number($('#iPrice').value),memo:$('#iMemo').value.trim(),updatedAt:dateNow()};if(editingIngredient)state.ingredients=state.ingredients.map(x=>x.id===obj.id?obj:x);else state.ingredients.push(obj);save();editingIngredient=null;toast('원재료를 저장했습니다.');go('ingredients')};
 }
 function bindMenuForm(){
  renderRecipe();liveCalc();
