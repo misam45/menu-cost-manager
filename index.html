@@ -105,6 +105,7 @@
 
     <div class="nav-title">원재료 관리</div>
     <button class="nav-item sub" data-page="ingredients">원재료 리스트</button>
+    <button class="nav-item sub" data-page="suppliers">매입처 관리</button>
 
     <div class="nav-title">메뉴 관리</div>
     <button class="nav-item sub" data-page="menus">메뉴 리스트</button>
@@ -137,14 +138,19 @@ const seed={
   {id:4,name:'뚜껑',type:'일회용품',purchaseUnit:'개',purchasePrice:30,memo:'아이스컵 전용',updatedAt:'2026-07-23'},
   {id:5,name:'바닐라시럽',type:'원재료',purchaseUnit:'L',purchasePrice:12000,memo:'',updatedAt:'2026-07-23'}
  ],
+ suppliers:[
+  {id:201,name:'한국 식자재',country:'한국',contact:'',memo:'',updatedAt:'2026-07-24'},
+  {id:202,name:'일본 현지 매입처',country:'일본',contact:'',memo:'',updatedAt:'2026-07-24'}
+ ],
  menus:[
   {id:101,name:'아이스 카페라테',category:'커피',salePrice:4000,targetRate:30,rounding:100,recipe:[{ingredientId:1,amount:18},{ingredientId:2,amount:200},{ingredientId:3,amount:1},{ingredientId:4,amount:1}],updatedAt:'2026-07-23'},
   {id:102,name:'바닐라라테',category:'커피',salePrice:4200,targetRate:30,rounding:100,recipe:[{ingredientId:1,amount:18},{ingredientId:2,amount:200},{ingredientId:3,amount:1},{ingredientId:4,amount:1},{ingredientId:5,amount:30}],updatedAt:'2026-07-23'}
  ]
 };
 let state=JSON.parse(localStorage.getItem(KEY)||'null')||structuredClone(seed);
+if(!Array.isArray(state.suppliers))state.suppliers=[];
 let currentPage='dashboard';
-let editingIngredient=null, editingMenu=null;
+let editingIngredient=null, editingSupplier=null, editingMenu=null;
 let draftRecipe=[];
 
 const $=s=>document.querySelector(s);
@@ -162,14 +168,14 @@ function status(m){const r=menuRate(m),t=Number(m.targetRate);return r<=t?'적�
 function statusClass(s){return s==='적정'?'ok':s==='주의'?'warn':'danger'}
 function save(){localStorage.setItem(KEY,JSON.stringify(state))}
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1700)}
-function pageTitle(p){return ({dashboard:'대시보드',ingredients:'원재료 관리 > 원재료 리스트','ingredient-form':'원재료 관리 > 원재료 등록·편집',menus:'메뉴 관리 > 메뉴 리스트','menu-form':'메뉴 관리 > 메뉴 등록·편집',analysis:'원가 분석 > 메뉴별 원가 현황',risk:'원가 분석 > 원가율 위험 메뉴'})[p]}
+function pageTitle(p){return ({dashboard:'대시보드',ingredients:'원재료 관리 > 원재료 리스트','ingredient-form':'원재료 관리 > 원재료 등록·편집',suppliers:'원재료 관리 > 매입처 관리','supplier-form':'원재료 관리 > 매입처 등록·편집',menus:'메뉴 관리 > 메뉴 리스트','menu-form':'메뉴 관리 > 메뉴 등록·편집',analysis:'원가 분석 > 메뉴별 원가 현황',risk:'원가 분석 > 원가율 위험 메뉴'})[p]}
 function go(page){
  currentPage=page; location.hash=page; $('#breadcrumb').textContent=pageTitle(page);
  document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page===page));
  $('#sidebar').classList.remove('open'); render();
 }
 function actions(){
- document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{editingIngredient=null;editingMenu=null;go(b.dataset.page)});
+ document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{editingIngredient=null;editingSupplier=null;editingMenu=null;go(b.dataset.page)});
 }
 function header(title,desc,button=''){return `<div class="page-head"><div><h1>${title}</h1><div class="page-desc">${desc}</div></div>${button}</div>`}
 
@@ -178,7 +184,7 @@ function dashboard(){
  const avgRate=state.menus.length?state.menus.reduce((s,m)=>s+menuRate(m),0)/state.menus.length:0;
  const counts={적정:0,주의:0,위험:0};state.menus.forEach(m=>counts[status(m)]++);
  const rows=state.menus.slice(-5).reverse().map(m=>`<tr><td><b>${m.name}</b><div class="muted">${m.category}</div></td><td>${money(menuCost(m))}</td><td>${money(m.salePrice)}</td><td>${menuRate(m).toFixed(1)}%</td><td><span class="badge ${statusClass(status(m))}">${status(m)}</span></td></tr>`).join('');
- return header('대시보드','메뉴 원가와 수익성 현황을 한눈에 확인합니다.',`<button class="btn primary" onclick="go('menu-form')">+ 메뉴 등록</button>`)
+ return header('대시보드','메뉴 원가와 수익성 현황을 한눈에 확인합니다.')
  +`<div class="cards">
   <div class="card stat"><div class="stat-label">등록 원재료</div><div class="stat-value">${state.ingredients.length}개</div><div class="stat-note">원재료 및 일회용품</div></div>
   <div class="card stat"><div class="stat-label">등록 메뉴</div><div class="stat-value">${state.menus.length}개</div><div class="stat-note">레시피 등록 완료</div></div>
@@ -217,6 +223,32 @@ function ingredientForm(){
   <div class="full callout" id="unitPreview">가격을 입력하면 사용 단가가 표시됩니다.</div>
  </div><div class="form-actions"><button type="button" class="btn" onclick="go('ingredients')">취소</button><button class="btn primary">저장</button></div></form></div>`;
 }
+function supplierList(){
+ return header('매입처 관리','한국과 일본의 원재료 매입처 정보를 등록하고 관리합니다.',`<button class="btn primary" onclick="newSupplier()">+ 매입처 등록</button>`)
+ +`<div class="panel"><div class="toolbar"><input id="supplierSearch" class="search" placeholder="매입처명 검색"><select id="supplierCountry"><option value="">전체 국가</option><option>한국</option><option>일본</option></select></div><div id="supplierTable"></div></div>`;
+}
+function renderSupplierTable(){
+ const q=($('#supplierSearch')?.value||'').toLowerCase(),country=$('#supplierCountry')?.value||'';
+ const list=state.suppliers.filter(s=>s.name.toLowerCase().includes(q)&&(!country||s.country===country));
+ $('#supplierTable').innerHTML=`<div class="table-wrap"><table><thead><tr><th>매입처명</th><th>국가</th><th>연락처</th><th>메모</th><th>최근 수정일</th><th>관리</th></tr></thead><tbody>${list.map(s=>`<tr><td><b>${s.name}</b></td><td><span class="badge neutral">${s.country}</span></td><td>${s.contact||'-'}</td><td>${s.memo||'-'}</td><td>${s.updatedAt}</td><td><button class="btn small" onclick="editSupplier(${s.id})">편집</button> <button class="btn small danger" onclick="removeSupplier(${s.id})">삭제</button></td></tr>`).join('')||`<tr><td colspan="6" class="empty">등록된 매입처가 없습니다.</td></tr>`}</tbody></table></div>`;
+}
+function supplierForm(){
+ const s=editingSupplier||{name:'',country:'일본',contact:'',memo:''};
+ return header(editingSupplier?'매입처 편집':'매입처 등록','매입처 기본 정보와 국가를 관리합니다.')
+ +`<div class="panel" style="max-width:800px"><form id="supplierForm"><div class="form-grid">
+  <div class="field"><label>매입처명 *</label><input id="sName" value="${s.name}" required placeholder="예: 도쿄 식자재 유통"></div>
+  <div class="field"><label>국가 *</label><select id="sCountry"><option ${s.country==='한국'?'selected':''}>한국</option><option ${s.country==='일본'?'selected':''}>일본</option></select></div>
+  <div class="field full"><label>연락처</label><input id="sContact" value="${s.contact||''}" placeholder="전화번호 또는 이메일"></div>
+  <div class="field full"><label>메모</label><textarea id="sMemo" rows="3">${s.memo||''}</textarea></div>
+ </div><div class="form-actions"><button type="button" class="btn" onclick="go('suppliers')">취소</button><button class="btn primary">저장</button></div></form></div>`;
+}
+function bindSupplierForm(){
+ $('#supplierForm').onsubmit=e=>{e.preventDefault();const obj={id:editingSupplier?.id||Date.now(),name:$('#sName').value.trim(),country:$('#sCountry').value,contact:$('#sContact').value.trim(),memo:$('#sMemo').value.trim(),updatedAt:dateNow()};if(editingSupplier)state.suppliers=state.suppliers.map(x=>x.id===obj.id?obj:x);else state.suppliers.push(obj);save();editingSupplier=null;toast('매입처를 저장했습니다.');go('suppliers')};
+}
+function newSupplier(){editingSupplier=null;go('supplier-form')}
+function editSupplier(id){editingSupplier=structuredClone(state.suppliers.find(x=>x.id===id));go('supplier-form')}
+function removeSupplier(id){if(confirm('매입처를 삭제할까요?')){state.suppliers=state.suppliers.filter(x=>x.id!==id);save();renderSupplierTable();toast('삭제했습니다.')}}
+
 function menuList(){
  return header('메뉴 리스트','메뉴별 원가율과 권장 판매가를 비교합니다.',`<button class="btn primary" onclick="newMenu()">+ 메뉴 등록</button>`)
  +`<div class="panel"><div class="toolbar"><input id="menuSearch" class="search" placeholder="메뉴명 검색"><select id="menuStatus"><option value="">전체 상태</option><option>적정</option><option>주의</option><option>위험</option></select></div><div id="menuTable"></div></div>`;
@@ -272,10 +304,12 @@ function analysis(riskOnly=false){
  <div class="panel"><div class="table-wrap"><table><thead><tr><th>메뉴</th><th>총원가</th><th>현재 판매가</th><th>현재 원가율</th><th>목표 원가율</th><th>차이</th><th>권장 판매가</th><th>상태</th></tr></thead><tbody>${list.map(m=>`<tr><td><b>${m.name}</b></td><td>${money(menuCost(m))}</td><td>${money(m.salePrice)}</td><td>${menuRate(m).toFixed(1)}%</td><td>${m.targetRate}%</td><td>${(menuRate(m)-m.targetRate).toFixed(1)}%p</td><td>${money(recommended(m))}</td><td><span class="badge ${statusClass(status(m))}">${status(m)}</span></td></tr>`).join('')||`<tr><td colspan="8" class="empty">표시할 데이터가 없습니다.</td></tr>`}</tbody></table></div></div>`;
 }
 function render(){
- const map={dashboard,ingredients:ingredientList,'ingredient-form':ingredientForm,menus:menuList,'menu-form':menuForm,analysis:()=>analysis(false),risk:()=>analysis(true)};
+ const map={dashboard,ingredients:ingredientList,'ingredient-form':ingredientForm,suppliers:supplierList,'supplier-form':supplierForm,menus:menuList,'menu-form':menuForm,analysis:()=>analysis(false),risk:()=>analysis(true)};
  $('#content').innerHTML=map[currentPage]();
  if(currentPage==='ingredients'){renderIngredientTable();$('#ingSearch').oninput=renderIngredientTable;$('#ingType').onchange=renderIngredientTable}
  if(currentPage==='ingredient-form') bindIngredientForm();
+ if(currentPage==='suppliers'){renderSupplierTable();$('#supplierSearch').oninput=renderSupplierTable;$('#supplierCountry').onchange=renderSupplierTable}
+ if(currentPage==='supplier-form') bindSupplierForm();
  if(currentPage==='menus'){renderMenuTable();$('#menuSearch').oninput=renderMenuTable;$('#menuStatus').onchange=renderMenuTable}
  if(currentPage==='menu-form') bindMenuForm();
 }
@@ -298,7 +332,7 @@ function editMenu(id){editingMenu=structuredClone(state.menus.find(x=>x.id===id)
 function removeMenu(id){if(confirm('메뉴를 삭제할까요?')){state.menus=state.menus.filter(x=>x.id!==id);save();renderMenuTable();toast('삭제했습니다.')}}
 $('#mobileMenu').onclick=()=>$('#sidebar').classList.toggle('open');
 actions();
-const hash=location.hash.replace('#','');if(['dashboard','ingredients','ingredient-form','menus','menu-form','analysis','risk'].includes(hash))currentPage=hash;
+const hash=location.hash.replace('#','');if(['dashboard','ingredients','ingredient-form','suppliers','supplier-form','menus','menu-form','analysis','risk'].includes(hash))currentPage=hash;
 go(currentPage);
 </script>
 </body>
